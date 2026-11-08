@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-elev: var(--c-elev);
+  --color-fg: var(--c-fg);
+  --color-muted: var(--c-muted);
+  --color-line: var(--c-line);
+  --color-accent: var(--c-accent);
+  --color-accent-fg: var(--c-accent-fg);
+  --color-good: var(--c-good);
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+}
+
+:root {
+  --c-bg: #0c0d0b;
+  --c-surface: #141612;
+  --c-elev: #1d1f18;
+  --c-fg: #f4f1ea;
+  --c-muted: #9a958b;
+  --c-line: #2c2e27;
+  --c-accent: #e23b2b;
+  --c-accent-fg: #fff8f6;
+  --c-good: #c5d4a4;
+  color-scheme: dark;
+}
+
+html.light {
+  --c-bg: #f6f3ec;
+  --c-surface: #fffcf7;
+  --c-elev: #efeae1;
+  --c-fg: #161714;
+  --c-muted: #5f5b53;
+  --c-line: #e3ddd2;
+  --c-accent: #d43224;
+  --c-accent-fg: #fff8f6;
+  --c-good: #2f6a32;
+  color-scheme: light;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--c-bg);
+  color: var(--c-fg);
+  font-family: var(--font-sans);
+  text-wrap: pretty;
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--c-accent);
+  color: var(--c-accent-fg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+.press {
+  transition: scale 150ms ease-out;
+}
+.press:active:not(:disabled) {
+  scale: 0.96;
+}
+
+.card-photo {
+  transition: scale 300ms ease;
+}
+.group:hover .card-photo {
+  scale: 1.03;
+}
+
+.spin-slow {
+  animation: bero-spin 36s linear infinite;
+}
+.orbit {
+  position: absolute;
+  inset: 0;
+  animation: bero-spin 16s linear infinite;
+}
+.orbit-jet {
+  position: absolute;
+  top: 2%;
+  left: 50%;
+  translate: -50% 0;
+}
+.route-jet {
+  offset-path: path("M 36 150 C 120 20, 260 18, 360 120");
+  offset-rotate: auto;
+  animation: bero-fly 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes bero-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes bero-fly {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+[dir="rtl"] .flip-rtl {
+  transform: scaleX(-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-slow,
+  .orbit,
+  .route-jet,
+  .card-photo {
+    animation: none;
+    transition: none;
+  }
+  .group:hover .card-photo {
+    scale: 1;
+  }
+}
