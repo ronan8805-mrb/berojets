@@ -323,11 +323,14 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
     jet.scale.set(size, size, 1);
     ndcA.project(camera);
     ndcB.project(camera);
-    const ang = Math.atan2(ndcB.y - ndcA.y, ndcB.x - ndcA.x);
+    const w = canvas.clientWidth || 1;
+    const h = canvas.clientHeight || 1;
+    // NDC y and x are not the same size on a phone, so weight them by the canvas.
+    const ang = Math.atan2((ndcB.y - ndcA.y) * h, (ndcB.x - ndcA.x) * w);
     const mat = jet.material as THREE.SpriteMaterial;
-    // Nose sits at the top of the texture. +π puts that nose on the route
-    // instead of trailing it, which was drawing the jet upside down.
-    mat.rotation = ang + Math.PI / 2;
+    // Nose is the top of the texture. This points it along the route and
+    // stays there through landing. Do not add another half-turn.
+    mat.rotation = ang - Math.PI / 2;
   }
 
   const tick = (now: number) => {
