@@ -108,7 +108,7 @@ function Results({ params }: { params: Search }) {
         <SearchForm initial={draftFromSearch(params)} />
       </div>
       {error ? <p className="mt-6 text-accent">{error}</p> : null}
-      {!loading && hits.length === 0 ? (
+      {!loading && !error && hits.length === 0 ? (
         <div className="mt-10 max-w-lg">
           <h2 className="font-display text-3xl">{t.results.empty}</h2>
           <p className="mt-2 text-muted">{t.results.emptyHint}</p>

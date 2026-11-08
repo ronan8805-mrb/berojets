@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { PLACES } from "@/lib/places";
 
 export type Geo = { lat: number; lng: number; label?: string };
 
@@ -39,84 +38,6 @@ function slerp(a: THREE.Vector3, b: THREE.Vector3, t: number) {
 function smooth(x: number) {
   const t = THREE.MathUtils.clamp(x, 0, 1);
   return t * t * (3 - 2 * t);
-}
-
-function makeJetSprite() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return new THREE.Sprite();
-  ctx.clearRect(0, 0, 512, 512);
-  ctx.translate(256, 270);
-  ctx.fillStyle = "#e7edf2";
-  ctx.beginPath();
-  ctx.moveTo(0, -230);
-  ctx.bezierCurveTo(22, -150, 26, -20, 22, 150);
-  ctx.lineTo(14, 196);
-  ctx.lineTo(-14, 196);
-  ctx.lineTo(-22, 150);
-  ctx.bezierCurveTo(-26, -20, -22, -150, 0, -230);
-  ctx.fill();
-  ctx.fillStyle = "#f7f4ee";
-  ctx.beginPath();
-  ctx.moveTo(0, -230);
-  ctx.bezierCurveTo(16, -150, 18, -20, 16, 150);
-  ctx.lineTo(10, 188);
-  ctx.lineTo(-14, 188);
-  ctx.lineTo(-22, 140);
-  ctx.bezierCurveTo(-26, -20, -22, -150, 0, -230);
-  ctx.fill();
-  const wing = (sign: number) => {
-    ctx.fillStyle = "#f4f1ea";
-    ctx.beginPath();
-    ctx.moveTo(sign * 12, -10);
-    ctx.lineTo(sign * 168, 78);
-    ctx.lineTo(sign * 150, 112);
-    ctx.lineTo(sign * 10, 48);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#d5dbe3";
-    ctx.beginPath();
-    ctx.ellipse(sign * 62, 36, 13, 26, sign * 0.55, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#1c2833";
-    ctx.beginPath();
-    ctx.ellipse(sign * 62, 30, 6, 10, sign * 0.55, 0, Math.PI * 2);
-    ctx.fill();
-  };
-  wing(-1);
-  wing(1);
-  ctx.fillStyle = "#f7f4ee";
-  ctx.beginPath();
-  ctx.moveTo(-8, 150);
-  ctx.lineTo(-62, 210);
-  ctx.lineTo(-46, 222);
-  ctx.lineTo(-6, 176);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(8, 150);
-  ctx.lineTo(62, 210);
-  ctx.lineTo(46, 222);
-  ctx.lineTo(6, 176);
-  ctx.fill();
-  ctx.fillStyle = "#e23b2b";
-  ctx.fillRect(-3, 120, 6, 70);
-  ctx.fillStyle = "#14202b";
-  ctx.beginPath();
-  ctx.ellipse(0, -168, 11, 22, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#243140";
-  for (let i = 0; i < 5; i += 1) {
-    ctx.fillRect(-16, -120 + i * 28, 7, 6);
-    ctx.fillRect(9, -120 + i * 28, 7, 6);
-  }
-  const map = new THREE.CanvasTexture(canvas);
-  map.colorSpace = THREE.SRGBColorSpace;
-  const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false }),
-  );
-  return sprite;
 }
 
 function cityLabel(text: string) {
@@ -172,7 +93,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
   renderer.setClearColor(0x070b14, 1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.2;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 80);
@@ -208,15 +129,6 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
   const earth = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 64), earthMat);
   earth.rotation.y = -Math.PI / 2;
   earthGroup.add(earth);
-
-  const borderMat = new THREE.MeshBasicMaterial({
-    transparent: true,
-    depthWrite: false,
-    opacity: 0.72,
-  });
-  const borders = new THREE.Mesh(new THREE.SphereGeometry(R + 0.012, 96, 64), borderMat);
-  borders.rotation.y = -Math.PI / 2;
-  earthGroup.add(borders);
 
   const atmo = new THREE.Mesh(
     new THREE.SphereGeometry(R * 1.08, 64, 48),
@@ -254,32 +166,50 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
     if (!started) started = performance.now();
   });
   const bumpMap = loader.load("/globe/earth-topo.png");
-  const borderMap = loader.load("/globe/borders.png");
+  const jetMap = loader.load("/globe/jet.png");
   colorMap.colorSpace = THREE.SRGBColorSpace;
-  borderMap.colorSpace = THREE.SRGBColorSpace;
+  jetMap.colorSpace = THREE.SRGBColorSpace;
   bumpMap.colorSpace = THREE.NoColorSpace;
   colorMap.anisotropy = 8;
-  borderMap.anisotropy = 8;
   earthMat.map = colorMap;
   earthMat.bumpMap = bumpMap;
-  earthMat.bumpScale = 0.045;
-  borderMat.map = borderMap;
-  textures.push(colorMap, bumpMap, borderMap);
+  earthMat.bumpScale = 0.035;
+  textures.push(colorMap, bumpMap, jetMap);
 
-  const jet = makeJetSprite();
+  const jet = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: jetMap, transparent: true, depthWrite: false }),
+  );
   earthGroup.add(jet);
 
-  const arcAlt = (u: number) => 0.055 + Math.sin(Math.PI * u) * 0.2;
-  const N = 28;
-  const trailPos = new Float32Array(N * 3);
-  const trailGeo = new THREE.BufferGeometry();
-  trailGeo.setAttribute("position", new THREE.BufferAttribute(trailPos, 3));
-  trailGeo.setDrawRange(0, 0);
-  const trail = new THREE.Line(
-    trailGeo,
-    new THREE.LineBasicMaterial({ color: 0xfff4ea, transparent: true, opacity: 0.9 }),
-  );
-  earthGroup.add(trail);
+  let borderGeo: THREE.BufferGeometry | null = null;
+  void fetch("/globe/countries.json")
+    .then((r) => r.json() as Promise<number[][]>)
+    .then((rings) => {
+      const pos: number[] = [];
+      for (const ring of rings) {
+        for (let i = 0; i < ring.length - 3; i += 2) {
+          const a = ll(ring[i + 1], ring[i], R + 0.012);
+          const b = ll(ring[i + 3], ring[i + 2], R + 0.012);
+          pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
+        }
+      }
+      borderGeo = new THREE.BufferGeometry();
+      borderGeo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      earthGroup.add(
+        new THREE.LineSegments(
+          borderGeo,
+          new THREE.LineBasicMaterial({
+            color: 0xf7f4ee,
+            transparent: true,
+            opacity: 0.72,
+            depthWrite: false,
+          }),
+        ),
+      );
+    })
+    .catch(() => {});
+
+  const arcAlt = (u: number) => 0.04 + Math.sin(Math.PI * u) * 0.16;
 
   let fromV = ll(20, -30, 1);
   let toV = ll(35, 20, 1);
@@ -296,65 +226,39 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
       pts.push(slerp(fromV, toV, u).multiplyScalar(R + arcAlt(u)));
     }
     const curve = new THREE.CatmullRomCurve3(pts);
-    const tube = new THREE.Mesh(
-      new THREE.TubeGeometry(curve, 140, 0.011, 8, false),
-      new THREE.MeshBasicMaterial({ color: 0xe23b2b }),
-    );
-    earthGroup.add(tube);
-    const glowTube = new THREE.Mesh(
-      new THREE.TubeGeometry(curve, 80, 0.026, 8, false),
-      new THREE.MeshBasicMaterial({
-        color: 0xff6a4a,
-        transparent: true,
-        opacity: 0.28,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      }),
-    );
-    earthGroup.add(glowTube);
-    const dotCount = 48;
-    const dotPos = new Float32Array(dotCount * 3);
-    for (let i = 0; i < dotCount; i += 1) {
-      const u = i / (dotCount - 1);
-      const p = slerp(fromV, toV, u).multiplyScalar(R + arcAlt(u) + 0.01);
-      dotPos[i * 3] = p.x;
-      dotPos[i * 3 + 1] = p.y;
-      dotPos[i * 3 + 2] = p.z;
-    }
-    const dotGeo = new THREE.BufferGeometry();
-    dotGeo.setAttribute("position", new THREE.BufferAttribute(dotPos, 3));
     earthGroup.add(
-      new THREE.Points(
-        dotGeo,
-        new THREE.PointsMaterial({
-          color: 0xfff7f2,
-          size: 0.055,
+      new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 160, 0.0065, 6, false),
+        new THREE.MeshBasicMaterial({ color: 0xff3b2a }),
+      ),
+    );
+    earthGroup.add(
+      new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 80, 0.02, 6, false),
+        new THREE.MeshBasicMaterial({
+          color: 0xff5a3c,
           transparent: true,
+          opacity: 0.22,
           depthWrite: false,
-          opacity: 0.95,
+          blending: THREE.AdditiveBlending,
         }),
       ),
     );
 
     const dest = toV.clone().normalize();
     pin = new THREE.Group();
-    const stem = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.008, 0.008, 0.1, 8),
-      new THREE.MeshBasicMaterial({ color: 0xe23b2b }),
-    );
-    stem.position.y = 0.05;
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.022, 16, 12),
-      new THREE.MeshBasicMaterial({ color: 0xfff4ea }),
-    );
-    head.position.y = 0.11;
     const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.07, 0.1, 48),
+      new THREE.RingGeometry(0.045, 0.062, 48),
       new THREE.MeshBasicMaterial({ color: 0xe23b2b, side: THREE.DoubleSide, transparent: true, opacity: 0.95 }),
     );
     ring.rotation.x = -Math.PI / 2;
-    pin.add(stem, head, ring);
-    pin.position.copy(dest.clone().multiplyScalar(R + 0.015));
+    const pearl = new THREE.Mesh(
+      new THREE.SphereGeometry(0.012, 12, 10),
+      new THREE.MeshBasicMaterial({ color: 0xfff4ea }),
+    );
+    pearl.position.y = 0.02;
+    pin.add(ring, pearl);
+    pin.position.copy(dest.clone().multiplyScalar(R + 0.012));
     pin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dest);
     earthGroup.add(pin);
     const label = opts.to.label ? cityLabel(opts.to.label) : null;
@@ -376,7 +280,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
   let finished = false;
   let landed = false;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const duration = reduce ? 900 : 15000;
+  const duration = reduce ? 700 : 6800;
   const arm = window.setTimeout(() => {
     if (!started) started = performance.now();
   }, 900);
@@ -449,22 +353,12 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
           : t > 0.8
             ? 0.9 + 0.1 * smooth((t - 0.8) / 0.2)
             : 0.06 + 0.84 * smooth((t - 0.12) / 0.68);
-      const alt = arcAlt(route) + 0.045;
+      const alt = arcAlt(route) + 0.06;
       const pos = place(route, alt);
       const next = place(Math.min(0.995, route + 0.02), alt);
-
-      for (let i = 0; i < N; i += 1) {
-        const u = Math.max(0, route - (i / (N - 1)) * 0.14);
-        const p = place(u, arcAlt(u));
-        trailPos[i * 3] = p.x;
-        trailPos[i * 3 + 1] = p.y;
-        trailPos[i * 3 + 2] = p.z;
-      }
-      trailGeo.setDrawRange(0, N);
-      (trailGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
       if (pin) {
-        const ring = pin.children[2] as THREE.Mesh;
-        const s = 1 + Math.sin(now * 0.006) * 0.18;
+        const ring = pin.children[0] as THREE.Mesh;
+        const s = 1 + Math.sin(now * 0.008) * 0.12;
         ring.scale.set(s, s, 1);
       }
 
@@ -477,20 +371,17 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
       const dist = THREE.MathUtils.clamp((R + 0.15) / Math.max(0.34, Math.cos(half)), 3.15, 5.35);
       camWant.copy(focus.clone().add(new THREE.Vector3(0, 0.16, 0)).normalize()).multiplyScalar(dist);
       lookWant.copy(focus).multiplyScalar(0.08);
-      if (t > 0.6) {
-        const u = smooth((t - 0.6) / 0.4);
+      if (t > 0.72) {
+        const u = smooth((t - 0.72) / 0.28);
         const destN = toV.clone().normalize();
-        const side = new THREE.Vector3().crossVectors(destN, new THREE.Vector3(0, 1, 0));
-        if (side.lengthSq() < 1e-4) side.set(1, 0, 0);
-        side.normalize();
-        camWant.lerp(destN.clone().multiplyScalar(3.15).addScaledVector(side, 0.35).add(new THREE.Vector3(0, 0.42, 0)), u);
-        lookWant.lerp(destN.clone().multiplyScalar(R * 0.98), u);
+        camWant.lerp(destN.clone().multiplyScalar(3.7).add(new THREE.Vector3(0, 0.28, 0)), u);
+        lookWant.lerp(destN.clone().multiplyScalar(R * 0.9), u);
       }
-      const k = 1 - Math.exp(-dt * 1.25);
+      const k = 1 - Math.exp(-dt * 2.4);
       camera.position.lerp(camWant, k);
       camera.up.set(0, 1, 0);
       camera.lookAt(lookWant);
-      aimJet(pos, next, t > 0.72 ? 0.085 : 0.12);
+      aimJet(pos, next, t > 0.8 ? 0.16 : 0.22);
 
       if (t > 0.86 && !landed) {
         landed = true;
@@ -500,7 +391,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
         finished = true;
         window.setTimeout(() => {
           if (!dead) opts.onDone();
-        }, reduce ? 80 : 1400);
+        }, reduce ? 60 : 700);
       }
     }
     renderer.render(scene, camera);
@@ -513,7 +404,7 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
     cancelAnimationFrame(raf);
     window.clearTimeout(arm);
     ro.disconnect();
-    trailGeo.dispose();
+    borderGeo?.dispose();
     starGeo.dispose();
     textures.forEach((tex) => tex.dispose());
     renderer.dispose();

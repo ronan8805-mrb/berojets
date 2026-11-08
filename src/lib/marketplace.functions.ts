@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { haversineNm, isIsoDate, quote } from "@/lib/geo";
+import { houseFeatured, houseJet, houseStats, searchHouse } from "@/lib/house-fleet";
 import { findPlace } from "@/lib/places";
 import {
   CATEGORIES,
@@ -131,26 +132,36 @@ async function liveProfile(userId: string) {
 }
 
 export const publicStats = createServerFn({ method: "GET" }).handler(async () => {
-  const sql = await db();
-  const a = await sql<{ n: number }>`select count(*)::int as n from aircraft where active = true`;
-  const c = await sql<{ n: number }>`select count(distinct home_city)::int as n from aircraft where active = true`;
-  return { aircraft: num(a[0]?.n), cities: num(c[0]?.n) };
+  try {
+    const sql = await db();
+    const a = await sql<{ n: number }>`select count(*)::int as n from aircraft where active = true`;
+    const c = await sql<{ n: number }>`select count(distinct home_city)::int as n from aircraft where active = true`;
+    return { aircraft: num(a[0]?.n), cities: num(c[0]?.n) };
+  } catch (err) {
+    console.error("[publicStats]", err);
+    return houseStats();
+  }
 });
 
 export const listFeatured = createServerFn({ method: "GET" }).handler(async () => {
-  const sql = await db();
-  const rows = await sql<ARow>`
-    select a.id, a.operator_id, a.name, a.model, a.category, a.seats, a.range_nm, a.speed_kts, a.year,
-      a.home_iata, a.home_city, a.home_country, a.lat, a.lng, a.hourly_from, a.hourly_to,
-      a.description, a.photo, a.featured, a.active,
-      coalesce(p.company_name, p.display_name, '') as operator_name
-    from aircraft a
-    left join profiles p on p.user_id = a.operator_id
-    where a.active = true and a.featured = true
-      and (a.operator_id = ${HOUSE} or p.suspended = false)
-    order by a.created_at desc
-    limit 6`;
-  return rows.map((r) => ({ ...mapCraft(r), operator_name: r.operator_name ?? "" }));
+  try {
+    const sql = await db();
+    const rows = await sql<ARow>`
+      select a.id, a.operator_id, a.name, a.model, a.category, a.seats, a.range_nm, a.speed_kts, a.year,
+        a.home_iata, a.home_city, a.home_country, a.lat, a.lng, a.hourly_from, a.hourly_to,
+        a.description, a.photo, a.featured, a.active,
+        coalesce(p.company_name, p.display_name, '') as operator_name
+      from aircraft a
+      left join profiles p on p.user_id = a.operator_id
+      where a.active = true and a.featured = true
+        and (a.operator_id = ${HOUSE} or p.suspended = false)
+      order by a.created_at desc
+      limit 6`;
+    return rows.map((r) => ({ ...mapCraft(r), operator_name: r.operator_name ?? "" }));
+  } catch (err) {
+    console.error("[listFeatured]", err);
+    return houseFeatured();
+  }
 });
 
 export const searchJets = createServerFn({ method: "POST" })
@@ -165,6 +176,7 @@ export const searchJets = createServerFn({ method: "POST" })
     const cat = data.cat === "any" || (CATEGORIES as readonly string[]).includes(data.cat) ? data.cat : "any";
     const origin = data.from ? findPlace(data.from) : null;
     const end = ret || data.depart;
+    try {
     const sql = await db();
     const rows = await sql<ARow>`
       select a.id, a.operator_id, a.name, a.model, a.category, a.seats, a.range_nm, a.speed_kts, a.year,
@@ -213,11 +225,16 @@ export const searchJets = createServerFn({ method: "POST" })
     }
     hits.sort((a, b) => Number(b.featured) - Number(a.featured) || a.distance_nm - b.distance_nm);
     return { ok: true as const, hits, blocked, dest: dest.city };
+    } catch (err) {
+      console.error("[searchJets]", err);
+      return searchHouse(data);
+    }
   });
 
 export const getJet = createServerFn({ method: "POST" })
   .validator((id: string) => clip(id, 80))
   .handler(async ({ data: id }) => {
+    try {
     const sql = await db();
     const rows = await sql<ARow>`
       select a.id, a.operator_id, a.name, a.model, a.category, a.seats, a.range_nm, a.speed_kts, a.year,
@@ -252,6 +269,12 @@ export const getJet = createServerFn({ method: "POST" })
       rating_avg: num(avg[0]?.n) ? Math.round(num(avg[0]?.avg) * 10) / 10 : null,
       rating_count: num(avg[0]?.n),
     };
+    } catch (err) {
+      console.error("[getJet]", err);
+      const jet = houseJet(id);
+      if (!jet) return { ok: false as const, error: "Missing" };
+      return { ok: true as const, jet: { ...jet, operator_name: "" }, reviews: [], rating_avg: null, rating_count: 0 };
+    }
   });
 
 export const ensureProfile = createServerFn({ method: "POST" })
