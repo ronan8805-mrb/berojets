@@ -119,7 +119,7 @@ export function FlightOverlay() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col bg-bg text-fg transition-opacity duration-300 ${leaving ? "opacity-0" : "opacity-100"}`}
+      className={`fixed inset-0 z-50 flex flex-col bg-[#070b14] text-fg transition-opacity duration-300 ${leaving ? "opacity-0" : "opacity-100"}`}
       role="dialog"
       aria-label={fill(t.globe.flying, { city })}
     >
