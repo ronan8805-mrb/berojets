@@ -325,7 +325,9 @@ export function mountGlobe(canvas: HTMLCanvasElement, opts: Idle | Flight): (() 
     ndcB.project(camera);
     const ang = Math.atan2(ndcB.y - ndcA.y, ndcB.x - ndcA.x);
     const mat = jet.material as THREE.SpriteMaterial;
-    mat.rotation = ang - Math.PI / 2;
+    // Nose sits at the top of the texture. +π puts that nose on the route
+    // instead of trailing it, which was drawing the jet upside down.
+    mat.rotation = ang + Math.PI / 2;
   }
 
   const tick = (now: number) => {
