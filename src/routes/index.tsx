@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CssGlobe, HeroGlobe } from "@/components/flight-overlay";
+import { HeroGlobe } from "@/components/flight-overlay";
 import { JetCard } from "@/components/jet-card";
 import { SearchForm } from "@/components/search-form";
 import { Shell, useProfile } from "@/components/shell";
@@ -71,9 +71,6 @@ function HomeBody() {
         </div>
         <div className="hidden md:block">
           <HeroGlobe />
-        </div>
-        <div className="md:hidden">
-          <CssGlobe />
         </div>
       </section>
       <section className="mx-auto max-w-6xl px-4 py-10">
